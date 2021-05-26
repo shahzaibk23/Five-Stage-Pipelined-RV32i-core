@@ -2,6 +2,8 @@ package datapath
 
 import chisel3._
 
+import tilelink._ 
+
 class Top extends Module{
 	val io = IO(new Bundle{
 		//val main_Instruction = Input(UInt(32.W))
@@ -23,7 +25,7 @@ class Top extends Module{
 	val Pc = Module(new PC())
 	val insMem = Module(new InsMem())
 	val jalr = Module(new JalrTarget())
-	val dataMem = Module(new MainMem())
+	// val dataMem = Module(new MainMem())
 	val ifId = Module(new IF_ID())
 	val idExe = Module(new ID_EXE())
 	val exeMem = Module(new EXE_MEM())
@@ -34,6 +36,8 @@ class Top extends Module{
 	val BU = Module(new BranchUnit())
 	val BFU = Module(new BranchFwdUnit())
 	val JFU = Module(new JalrFwdUnit())
+
+	val tLink = Module(new TileTop())
 	
 	//-----------------------------------------------IF------------------
 	
@@ -302,7 +306,7 @@ class Top extends Module{
 			idExe.io.strData_in := regFile.io.rd2
 		}
 	}.otherwise{
-		idExe.io.strData_in := dataMem.io.DataOut
+		idExe.io.strData_in := tLink.io.channelD.bits.d_data.asSInt //dataMem.io.DataOut
 	}
 
 
@@ -400,11 +404,11 @@ class Top extends Module{
 	}
 
 	when(memWr.io.memToReg_out=== 1.U && memWr.io.rd_out === idExe.io.rs1Ins_out){
-		alu.io.a := memWr.io.dataOut_out
+		alu.io.a := tLink.io.channelD.bits.d_data.asSInt
 	}
 	
 	when(memWr.io.memToReg_out=== 1.U && memWr.io.rd_out === idExe.io.rs2Ins_out){
-		alu.io.b := memWr.io.dataOut_out
+		alu.io.b := tLink.io.channelD.bits.d_data.asSInt
 	}
 
 	when(idExe.io.memWrite_out === 1.U){
@@ -430,22 +434,43 @@ class Top extends Module{
 	//--------------------------------------------------MEM-------------------
 
 	//DataMemory
-	dataMem.io.Address := (exeMem.io.aluOutput_out/*(9,2)*/).asUInt
-	dataMem.io.str := exeMem.io.memWrite_out
-	dataMem.io.ld := exeMem.io.memRead_out
+
+	tLink.io.channelA.valid := 1.B
+	tLink.io.channelA.bits.a_param := 0.U
+	tLink.io.channelA.bits.a_size := 2.U
+	tLink.io.channelA.bits.a_source := 2.U
+	tLink.io.channelA.bits.a_mask := 1.U
+	tLink.io.channelA.bits.a_corrupt := 0.U
+	tLink.io.channelA.bits.a_opcode := Mux(exeMem.io.memRead_out === 1.U, 4.U,Mux(exeMem.io.memWrite_out === 1.U,1.U, 2.U))
+	tLink.io.channelA.bits.a_address := (exeMem.io.aluOutput_out/*(9,2)*/).asUInt
+	tLink.io.channelA.bits.a_data := Mux(exeMem.io.memWrite_out === 1.U,
+																	Mux(
+																		memWr.io.memToReg_out === 1.U && 
+																		exeMem.io.rs2Sel_in === memWr.io.rd_out,
+																		tLink.io.channelD.bits.d_data.asSInt.asUInt,
+																		exeMem.io.strData_out.asUInt
+																	)
+																	, 0.U)
+
+	tLink.io.channelD.ready := 1.B
+
+
+	// dataMem.io.Address := (exeMem.io.aluOutput_out/*(9,2)*/).asUInt
+	// dataMem.io.str := exeMem.io.memWrite_out
+	// dataMem.io.ld := exeMem.io.memRead_out
 	/*when(memWr.io.memToReg_out === 1.U && exeMem.io.rs2Sel_in === memWr.io.rd_out){
 		dataMem.io.DataIn := memWr.io.dataOut_out
 	}.otherwise{
 		
 	}*/
-	dataMem.io.DataIn := exeMem.io.strData_out
+	// dataMem.io.DataIn := exeMem.io.strData_out
 
 	//MEM_WR----------in-------
 	
 	memWr.io.memToReg_in := exeMem.io.memToReg_out
 	memWr.io.rd_in := exeMem.io.rd_out
 	memWr.io.aluOutput_in := exeMem.io.aluOutput_out
-	memWr.io.dataOut_in := dataMem.io.DataOut
+	memWr.io.dataOut_in := tLink.io.channelD.bits.d_data.asSInt
 	memWr.io.regWrite_in := exeMem.io.regWrite_out
 	memWr.io.rs2Sel_in := exeMem.io.rs2Sel_out
 	memWr.io.baseReg_in := exeMem.io.baseReg_out
@@ -460,7 +485,7 @@ class Top extends Module{
 	regFile.io.RegWrite := memWr.io.regWrite_out
 
 	when(memWr.io.memToReg_out === 1.U){
-		regFile.io.WriteData := memWr.io.dataOut_out
+		regFile.io.WriteData := tLink.io.channelD.bits.d_data.asSInt
 	}.otherwise{
 		when(regFile.io.RegWrite === 1.U){
 			regFile.io.WriteData := memWr.io.aluOutput_out
