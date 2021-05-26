@@ -1,99 +1,80 @@
-Chisel Project Template
+Five Stage Pipelined Core RV-32i with Tilelink Integrated on Data Memory (Main Memory)
 =======================
 
-You've done the [Chisel Bootcamp](https://github.com/freechipsproject/chisel-bootcamp), and now you
-are ready to start your own Chisel project.  The following procedure should get you started
-with a clean running [Chisel3](https://www.chisel-lang.org/) project.
+## TESTING: <b style="color:green"> SUCCESS </b>
 
-## Make your own Chisel3 project
+## About 
+This repository contains the Five Stage Pipelined RV-32i Core.
 
-### Dependencies
+It has **Tilelink** Bus Architecture Protocol Integrated with Data Memory, servig as a communication medium between **Core (MASTER)** and the **Data Memory (SLAVE)**.
 
-#### JDK 8 or newer
-
-We recommend LTS releases Java 8 and Java 11. You can install the JDK as recommended by your operating system, or use the prebuilt binaries from [AdoptOpenJDK](https://adoptopenjdk.net/).
-
-#### SBT
-
-SBT is the most common built tool in the Scala community. You can download it [here](https://www.scala-sbt.org/download.html).
-
-### How to get started
-
-#### Create a repository from the template
-
-This repository is a Github template. You can create your own repository from it by clicking the green `Use this template` in the top right.
-Please leave `Include all branches` **unchecked**; checking it will pollute the history of your new repository.
-For more information, see ["Creating a repository from a template"](https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template).
-
-#### Wait for the template cleanup workflow to complete
-
-After using the template to create your own blank project, please wait a minute or two for the `Template cleanup` workflow to run which will removes some template-specific stuff from the repository (like the LICENSE).
-Refresh the repository page in your browser until you see a 2nd commit by `actions-user` titled `Template cleanup`.
-
-
-#### Clone your repository
-
-Once you have created a repository from this template and the `Template cleanup` workflow has completed, you can click the green button to get a link for cloning your repository.
-Note that it is easiest to push to a repository if you set up SSH with Github, please see the [related documentation](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/connecting-to-github-with-ssh). SSH is required for pushing to a Github repository when using two-factor authentication.
-
-```sh
-git clone git@github.com:shahzaibk23/Five-Stage-Pipelined-RV32i-core.git
+## How to Use
+Start off by cloning the repo
+```ruby
+git clone https://github.com/shahzaibk23/Five-Stage-Pipelined-RV32i-core
 cd Five-Stage-Pipelined-RV32i-core
 ```
 
-#### Set project organization and name in build.sbt
+Create a **txt** File anywhere in you system
 
-The cleanup workflow will have attempted to provide sensible defaults for `ThisBuild / organization` and `name` in the `build.sbt`.
-Feel free to use your text editor of choice to change them as you see fit.
+This File will be used to store the instructions which we want to run in our core
 
-#### Clean up the README.md file
+Write the machine code of your custom instruction or use the sample ones below
+```ruby
+00700193
+00302023
+00002203
+004202b3
+```
+Copy and paste this machine code in your **txt** file.
 
-Again, use you editor of choice to make the README specific to your project.
-
-#### Add a LICENSE file
-
-It is important to have a LICENSE for open source (or closed source) code.
-This template repository has the Unlicense in order to allow users to add any license they want to derivative code.
-The Unlicense is stripped when creating a repository from this template so that users do not accidentally unlicense their own work.
-
-For more information about a license, check out the [Github Docs](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/adding-a-license-to-a-repository).
-
-#### Commit your changes
-```sh
-git commit -m 'Starting Five-Stage-Pipelined-RV32i-core'
-git push origin main
+This machine code is for the following Assembly Instructions.
+```ruby
+addi x3,x0,7
+sw x3, 0(x0)
+lw x4, 0(x0)
+add x5,x4,x4
 ```
 
-### Did it work?
+You can check the output of these instruction via the [RISC-V Simulator]("https://www.kvakil.me/venus/")
 
-You should now have a working Chisel3 project.
+Then go to file
+```ruby 
+Five-Stage-Pipelined-RV32i-core/src/main/scala/datapath/InsMem.scala
+```
+On Line 14 you will find
+```scala
+loadMemoryFromFile(mem, "/home/kraken/Desktop/Instruction.txt")
+```
+Replace the string in **loadMemoryFromFile** with the complete path of your **txt** file, in the same format as it is written.
 
-You can run the included test with:
-```sh
-sbt test
+Then go to file
+```ruby
+Five-Stage-Pipelined-RV32i-core/src/test/scala/datapath/topTest.scala
+```
+Ctrl+A all the code and un-comment it (Ctrl+/)
+
+On line 14 you will see
+```scala
+c.clock.step(50)
+```
+Adjust the clock cycles you want to see in the verilator/waveform.
+
+**All configurations are done at this point. Let's run it now and visualize on verilator**
+
+Open your terminal inside the main folder and run
+```ruby
+sbt
 ```
 
-You should see a whole bunch of output that ends with something like the following lines
+You will see
+```ruby
+sbt:Five-Stage-Pipelined-RV32i-core>
 ```
-[info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
-[info] All tests passed.
-[success] Total time: 5 s, completed Dec 16, 2020 12:18:44 PM
+
+Then type the command to run execute our instructions and build verilator of it.
+```ruby
+sbt:Five-Stage-Pipelined-RV32i-core> testOnly datapath.topTest -- -DwriteVcd=1
 ```
-If you see the above then...
 
-### It worked!
-
-You are ready to go. We have a few recommended practices and things to do.
-
-* Use packages and following conventions for [structure](https://www.scala-sbt.org/1.x/docs/Directories.html) and [naming](http://docs.scala-lang.org/style/naming-conventions.html)
-* Package names should be clearly reflected in the testing hierarchy
-* Build tests for all your work
-* Read more about testing in SBT in the [SBT docs](https://www.scala-sbt.org/1.x/docs/Testing.html)
-* This template includes a [test dependency](https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Per-configuration+dependencies) on [chiseltest](https://github.com/ucb-bar/chisel-testers2), this is a reasonable starting point for most tests
-  * You can remove this dependency in the build.sbt file if you want to
-* Change the name of your project in the build.sbt file
-* Change your README.md
-
-## Problems? Questions?
-
-Check out the [Chisel Users Community](https://www.chisel-lang.org/community.html) page for links to get in contact!
+Then inside test_run_dir folder your VCD and V files will be found. Visualize the output on GTKWave.
