@@ -11,7 +11,7 @@ class topTest extends FreeSpec with ChiselScalatestTester {
     "TOP Test" in {
         test(new Top).withAnnotations(Seq(VerilatorBackendAnnotation)){ c =>
 
-        c.clock.step(50)
+        // c.clock.step(50)
 
         }
     }
