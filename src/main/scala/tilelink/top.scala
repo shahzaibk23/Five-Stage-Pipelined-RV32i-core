@@ -36,7 +36,7 @@ class TileTop extends Module with OpCodes with Config {
             stall.io.bundle_in.d_data := 2.U
         }
 
-        stall.io.bundle_in.d_addr := io.channelA.bits.a_address
+        // stall.io.bundle_in.d_addr := io.channelA.bits.a_address
         stall.io.bundle_in.d_param := 0.U
         stall.io.bundle_in.d_size := io.channelA.bits.a_size
         stall.io.bundle_in.d_source := io.channelA.bits.a_source
@@ -46,7 +46,7 @@ class TileTop extends Module with OpCodes with Config {
         stall.io.valid_in := 1.U
 
     }.otherwise{
-        stall.io.bundle_in.d_addr := 0.U
+        // stall.io.bundle_in.d_addr := 0.U
         stall.io.bundle_in.d_opcode := 0.U
         stall.io.bundle_in.d_param := 0.U
         stall.io.bundle_in.d_size := 0.U
